@@ -1,0 +1,24 @@
+{
+  "name": "croisement-bati-cadastre-osm",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@turf/turf": "^5.1.6",
+    "async": "^2.6.1",
+    "decompress": "^4.2.0",
+    "edigeo-to-geojson": "^0.1.0",
+    "flatbush": "^3.0.0",
+    "martinez-polygon-clipping": "^0.4.3",
+    "minimist": "^1.2.0",
+    "mkdirp": "^0.5.1",
+    "osmtogeojson": "^3.0.0-beta.3",
+    "proj-geojson": "^0.1.1",
+    "sync-request": "^6.0.0"
+  }
+}
