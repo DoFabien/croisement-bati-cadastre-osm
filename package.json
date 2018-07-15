@@ -14,7 +14,6 @@
     "decompress": "^4.2.0",
     "edigeo-to-geojson": "^0.1.0",
     "flatbush": "^3.0.0",
-    "martinez-polygon-clipping": "^0.4.3",
     "minimist": "^1.2.0",
     "mkdirp": "^0.5.1",
     "osmtogeojson": "^3.0.0-beta.3",

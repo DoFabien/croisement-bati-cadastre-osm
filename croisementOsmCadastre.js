@@ -1,6 +1,6 @@
 const Flatbush = require('flatbush');
 const turf = require('@turf/turf');
-const martinez = require('martinez-polygon-clipping');
+const martinez = require('./martinez/martinez.js');
 
 // Change les properties à partir du bati du cadastre en OSM compatible
 const toOsmAttributs = function (_geojsonCadastre) {
@@ -52,59 +52,47 @@ const getNewBuildings = function (geojsonCadastre, geojsonOSM) {
         /* La BBOX du batiment du cadastre n'iterscect pas du tout la BBOX des bati OSM */
         if (found.length == 0) {
             newBatiFeatures.push(cadastreFeatures[i])
-        } else { // la bbox iDatanterscete au moins un bati OSM
-            let maxTxRecouvrement = 0;
+        } else { // la bbox interscete au moins un bati OSM
             let sumInterscetArea = 0;
             for (let j = 0; j < found.length; j++) {
+                let error = false;
                 let polyInterscet = null
-                // console.log(turf.area(cadastreFeatures[i]), turf.area(osmFeatures[found[j]]));
-                if (osmFeatures[found[j]].geometry.type === 'Polygon') {
-                    const intersection = martinez.intersection(
-                        //truncate à 6, sinon martinez peut buguer, on est pas à 10cm pret...
-                        turf.truncate(cadastreFeatures[i], truncateOptions).geometry.coordinates,
-                        turf.truncate(osmFeatures[found[j]], truncateOptions).geometry.coordinates
-                    );
-                    if (intersection.length > 0) {
-                        if (intersection[0].length > 1) {
-                            polyInterscet = turf.multiPolygon(intersection);
-                        } else {
-                            // intersection = intersection[0];
-                            let firstCoords = intersection[0][0][0];
-                            let lastCoords = intersection[0][0][intersection[0][0].length - 1];
-                            //    console.log(firstCoords, lastCoords);
-                               if (firstCoords.toString() === lastCoords.toString()){
-                                polyInterscet = turf.polygon(intersection[0]);
-                               } else {
-                                intersection[0][0].push(firstCoords);
-                                polyInterscet = turf.polygon(intersection[0]);
-                                   console.log('oups, firstCoords : ', firstCoords, ' lastcoords: ', lastCoords)
-                               }
-                               
-                            
-                         
-                        }
-                    
-                    const currentAreaPolygon = turf.area(polyInterscet);
-                    sumInterscetArea = sumInterscetArea + currentAreaPolygon;
 
-                    } else {
-                        polyInterscet = null;
+      
+                // console.log(turf.area(cadastreFeatures[i]), turf.area(osmFeatures[found[j]]));
+                if ((osmFeatures[found[j]].geometry.type === 'Polygon' || osmFeatures[found[j]].geometry.type === 'MultiPolygon') &&
+                    (cadastreFeatures[i].geometry.type === 'Polygon' || cadastreFeatures[i].geometry.type === 'MultiPolygon')) {
+                    
+                        
+                        intersection = null;
+                    try {
+                        intersection = martinez.intersection(
+                            //truncate à 6, sinon martinez peut buguer, on est pas à 10cm pret...
+                            turf.truncate(cadastreFeatures[i], truncateOptions).geometry.coordinates,
+                            turf.truncate(osmFeatures[found[j]], truncateOptions).geometry.coordinates
+                        );
+                    } catch (error) {
+                        error = true;
                     }
 
+                    if (intersection && intersection.length > 0) {
+                        try {
+                            polyInterscet = turf.Polygon(intersection);
+                        } catch (error) {
+                            polyInterscet = turf.multiPolygon(intersection);
+                        }
 
+                        const currentAreaPolygon = turf.area(polyInterscet);
+                        sumInterscetArea = sumInterscetArea + currentAreaPolygon;
 
+                    } else {
+                        if (error) {
+                            // L'erreur arrive souvent quand les arcs se supperposent...
+                            currentAreaPolygon = turf.area(turf.truncate(osmFeatures[found[j]], truncateOptions));
+                        }
+                        polyInterscet = null;
+                    }
                 }
-
-                // Si on a au moins une zone commune
-
-                // if (polyInterscet) {
-                //     const areaCadastre = turf.area(cadastreFeatures[i]);
-                //     const areaIntersec = turf.area(polyInterscet)
-                //     const txRecouvrement = areaIntersec / areaCadastre;
-                //     if (maxTxRecouvrement < txRecouvrement) {
-                //         maxTxRecouvrement = txRecouvrement;
-                //     }
-                // }
             }
 
             const areaCadastre = turf.area(cadastreFeatures[i]);
@@ -117,14 +105,12 @@ const getNewBuildings = function (geojsonCadastre, geojsonOSM) {
                 } else {
                     stableBati.push(cadastreFeatures[i])
                 }
-    
+
             }
 
         }
     }
 
-
-    // console.log(newBatiFeatures);
     let resultNewBati = turf.featureCollection(newBatiFeatures);
     let resultConflict = turf.featureCollection(conflictBati);
     let resultStable = turf.featureCollection(stableBati);
@@ -164,13 +150,20 @@ const getOldBuildings = function (geojsonCadastre, geojsonOSM) {
             for (let j = 0; j < found.length; j++) {
                 let polyInterscet = null
                 // console.log(turf.area(cadastreFeatures[i]), turf.area(osmFeatures[found[j]]));
-                if (cadastreFeatures[found[j]].geometry.type === 'Polygon' && osmFeatures[i].geometry.type === 'Polygon') {
-                    const intersection = martinez.intersection(
-                        //truncate à 6, sinon martinez peut buguer, on est pas à 10cm pret...
-                        turf.truncate(osmFeatures[i], truncateOptions).geometry.coordinates,
-                        turf.truncate(cadastreFeatures[found[j]], truncateOptions).geometry.coordinates
-                    );
-                    polyInterscet = turf.multiPolygon(intersection);
+                if ((cadastreFeatures[found[j]].geometry.type === 'Polygon' || cadastreFeatures[found[j]].geometry.type === 'MultiPolygon')
+                    && (osmFeatures[i].geometry.type === 'Polygon' || osmFeatures[i].geometry.type === 'MultiPolygon')) {
+                    let intersection = null;
+                    try {
+                        intersection = martinez.intersection(
+                            //truncate à 6, sinon martinez peut buguer, on est pas à 10cm pret...
+                            turf.truncate(osmFeatures[i], truncateOptions).geometry.coordinates,
+                            turf.truncate(cadastreFeatures[found[j]], truncateOptions).geometry.coordinates
+                        );
+                        polyInterscet = turf.multiPolygon(intersection);
+                    } catch (error) {
+                        console.log('Oups, une erreur lors de l\'intersection s\'est produite (osm to cadastre)');
+                    }
+
                 }
 
                 // Si on a au moins une zone commune
