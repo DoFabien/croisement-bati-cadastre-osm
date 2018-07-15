@@ -6,8 +6,8 @@ const turf = require('@turf/turf')
 const getOsmBati = function(geojsonCommune) {
     const bboxCommune = turf.bbox(geojsonCommune);
     const bboxStrOverpass = '(' + [bboxCommune[1], bboxCommune[0], bboxCommune[3], bboxCommune[2]].join(',') + ')';
-
-    let req = '[out:json][timeout:200];(way["building"]' + bboxStrOverpass + ';);out meta;>;out meta;'
+    
+    let req = '[out:json][timeout:200];(way["building"]' + bboxStrOverpass + ';relation["building"]' + bboxStrOverpass + ';);out meta;>;out meta;'
     const res = JSON.parse(request('GET', 'https://overpass-api.de/api/interpreter?data=' + req).getBody('utf8'));
     const geojsonOsmBuilding = osmtogeojson(res);
 
